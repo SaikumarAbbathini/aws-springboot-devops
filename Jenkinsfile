@@ -7,13 +7,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout develop') {
-            steps {
-                git branch: 'develop',
-                    url: 'https://github.com/SaikumarAbbathini/aws-springboot-devops.git'
-            }
-        }
-
         stage('Docker Build and Push') {
             steps {
                 withCredentials([usernamePassword(
@@ -21,33 +14,27 @@ pipeline {
                     usernameVariable: 'DOCKERHUB_USERNAME',
                     passwordVariable: 'DOCKERHUB_PASSWORD'
                 )]) {
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-                        $env:DOCKERHUB_PASSWORD | docker login --username $env:DOCKERHUB_USERNAME --password-stdin
-                        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-                        docker build --tag "$($env:IMAGE_NAME):$($env:IMAGE_TAG)" .
-                        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-                        docker push "$($env:IMAGE_NAME):$($env:IMAGE_TAG)"
-                        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                    sh '''
+                        set -eu
+                        printf '%s' "$DOCKERHUB_PASSWORD" |
+                            docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+                        docker build --tag "$IMAGE_NAME:$IMAGE_TAG" .
+                        docker push "$IMAGE_NAME:$IMAGE_TAG"
                         docker logout
                     '''
                 }
             }
         }
 
-        stage('Deploy to local Minikube') {
+        stage('Deploy to local Kubernetes') {
             steps {
-                powershell '''
-                    $ErrorActionPreference = 'Stop'
+                sh '''
+                    set -eu
                     kubectl apply -f k8s/deployment.yaml
-                    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                     kubectl apply -f k8s/service.yaml
-                    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-                    kubectl set image deployment/aws-devops-demo aws-devops-demo="$($env:IMAGE_NAME):$($env:IMAGE_TAG)"
-                    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                    kubectl set image deployment/aws-devops-demo aws-devops-demo="$IMAGE_NAME:$IMAGE_TAG"
                     kubectl rollout status deployment/aws-devops-demo
-                    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-                    '''
+                '''
             }
         }
     }
