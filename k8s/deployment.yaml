@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
         - name: aws-devops-demo
-          image: saikumar990890/aws-springboot-demo:latest
+          image: saikumar990890/aws-springboot-devops:latest
           ports:
             - containerPort: 80
