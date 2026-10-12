@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'saikumar990890/aws-springboot-devops'
         IMAGE_TAG = "${BUILD_NUMBER}"
+        KUBECONFIG = '/var/lib/jenkins/.kube/config'
     }
 
     stages {
